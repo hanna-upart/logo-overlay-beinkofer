@@ -5,6 +5,13 @@ from PIL import Image
 import io
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Oder z. B. ["https://deine-domain.com"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 logo = Image.open("Logo blau.jpg").convert("RGBA")
 
 @app.post("/add-logo")
