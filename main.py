@@ -1,18 +1,26 @@
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, JSONResponse
 from PIL import Image
 import io
 
 app = FastAPI()
+
+# CORS-Freigabe für ALLE Domains (zum Testen)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Oder z. B. ["https://deine-domain.com"]
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Logo laden
 logo = Image.open("Logo blau.jpg").convert("RGBA")
+
+@app.get("/")
+def root():
+    return JSONResponse(content={"message": "Logo API is running"})
 
 @app.post("/add-logo")
 async def add_logo(image: UploadFile = File(...)):
