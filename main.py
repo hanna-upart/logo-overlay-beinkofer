@@ -4,7 +4,7 @@ from PIL import Image
 import io
 
 app = FastAPI()
-logo = Image.open("logo.png").convert("RGBA")
+logo = Image.open("logo blau.jpg").convert("RGBA")
 
 @app.post("/add-logo")
 async def add_logo(image: UploadFile = File(...)):
