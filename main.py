@@ -52,4 +52,4 @@ async def add_logo(image: UploadFile = File(...)):
     # Bild als PNG streamen
     img_byte_arr = io.BytesIO()
     combined.save(img_byte_arr, format='PNG')
-    im
+  
