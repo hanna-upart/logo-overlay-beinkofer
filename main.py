@@ -1,55 +1,55 @@
 from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from PIL import Image
 import io
 import os
 
-# Starte FastAPI und aktiviere CORS für alle Domains (du kannst das später einschränken)
 app = FastAPI()
+
+# CORS aktivieren für alle Domains (optional, aber nützlich für GPT-Verbindung)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Erlaube alle Ursprünge (z. B. dein GPT)
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Lade das Logo (muss im Projektordner liegen, z. B. "logo.png")
-logo_path = "logo.png"
-if not os.path.exists(logo_path):
-    raise RuntimeError(f"Logo-Datei nicht gefunden: {logo_path}")
+# Logo laden
+LOGO_PATH = "logo.png"
+if not os.path.exists(LOGO_PATH):
+    raise RuntimeError(f"Logo-Datei nicht gefunden: {LOGO_PATH}")
 
-logo = Image.open(logo_path).convert("RGBA")
+logo = Image.open(LOGO_PATH).convert("RGBA")
 
-# API-Endpunkt: Bild hochladen, Logo einfügen, Bild zurückgeben
 @app.post("/add-logo")
 async def add_logo(image: UploadFile = File(...)):
+    # Bild laden
     original = Image.open(image.file).convert("RGBA")
 
-    # Logo ggf. skalieren (max 20% der Originalbildbreite)
+    # Logo verkleinern auf max 20 % der Breite
     max_logo_width = int(original.width * 0.2)
-    if logo.width > max_logo_width:
-        ratio = max_logo_width / logo.width
-        resized_logo = logo.resize(
-            (int(logo.width * ratio), int(logo.height * ratio)),
-            resample=Image.LANCZOS
-        )
-    else:
-        resized_logo = logo
-
-    # Position des Logos (rechts unten mit etwas Abstand)
-    margin = 30
-    position = (
-        original.width - resized_logo.width - margin,
-        original.height - resized_logo.height - margin
+    ratio = max_logo_width / logo.width
+    new_logo = logo.resize(
+        (int(logo.width * ratio), int(logo.height * ratio)),
+        resample=Image.LANCZOS
     )
 
-    # Kombiniere Originalbild + Logo
-    combined = original.copy()
-    combined.paste(resized_logo, position, resized_logo)
+    # Position unten rechts mit Abstand
+    margin = 30
+    position = (
+        original.width - new_logo.width - margin,
+        original.height - new_logo.height - margin
+    )
 
-    # Bild als PNG streamen
-    img_byte_arr = io.BytesIO()
-    combined.save(img_byte_arr, format='PNG')
-  
+    # Logo einfügen
+    result = original.copy()
+    result.paste(new_logo, position, new_logo)
+
+    # Bild als PNG zurückgeben
+    img_bytes = io.BytesIO()
+    result.save(img_bytes, format="PNG")
+    img_bytes.seek(0)
+
+    return StreamingResponse(img_bytes, media_type="image/png")
