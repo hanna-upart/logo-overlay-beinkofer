@@ -10,29 +10,28 @@ app = FastAPI()
 # CORS für Browser-Uploads
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Für Tests erlaubt alles
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Logo prüfen und laden
-logo_path = "logo.png"
-if not os.path.exists(logo_path):
-    raise RuntimeError(f"Logo-Datei fehlt: {logo_path}")
-
-logo = Image.open(logo_path).convert("RGBA")
-
-# Test-Route für "läuft"-Check
 @app.get("/")
 def root():
     return JSONResponse(content={"status": "OK", "message": "Logo API läuft"})
 
-# Hauptfunktion zum Logo-Einfügen
 @app.post("/add-logo")
 async def add_logo(image: UploadFile = File(...)):
-    original = Image.open(image.file).convert("RGBA")
-    
+    logo_path = "logo.png"
+    if not os.path.exists(logo_path):
+        return JSONResponse(content={"error": f"Logo-Datei fehlt: {logo_path}"}, status_code=500)
+
+    try:
+        logo = Image.open(logo_path).convert("RGBA")
+        original = Image.open(image.file).convert("RGBA")
+    except Exception as e:
+        return JSONResponse(content={"error": f"Bildfehler: {str(e)}"}, status_code=500)
+
     # Logo ggf. skalieren
     max_logo_width = int(original.width * 0.2)
     if logo.width > max_logo_width:
@@ -43,4 +42,17 @@ async def add_logo(image: UploadFile = File(...)):
     else:
         resized_logo = logo
 
-    # Platzi
+    # Platzierung: unten rechts
+    margin = 30
+    position = (
+        original.width - resized_logo.width - margin,
+        original.height - resized_logo.height - margin
+    )
+
+    combined = original.copy()
+    combined.paste(resized_logo, position, resized_logo)
+
+    img_byte_arr = io.BytesIO()
+    combined.save(img_byte_arr, format="PNG")
+    img_byte_arr.seek(0)
+    return StreamingResponse(img_byte_arr, media_type="image/png")
